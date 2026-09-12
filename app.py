@@ -19,7 +19,7 @@ def load_menu():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("chat.html")
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
