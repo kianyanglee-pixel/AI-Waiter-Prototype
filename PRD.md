@@ -4,29 +4,57 @@
 
 AI Waiter is a conversational restaurant assistant that helps guests browse a menu, receive personalized recommendations, place orders, and request assistance through a simple chat-based interface. It supports restaurant staff by reducing repetitive questions and improving order accuracy.
 
-### Simple Service Flow
+### Technical Prototype Flow
 
-The AI Waiter follows a short, predictable workflow. It uses approved restaurant data, keeps the guest's cart safe, and involves staff whenever it cannot answer confidently.
+The current prototype is a Flask application with a browser-based questionnaire. The diagram below shows the files, runtime boundaries, data flow, and external service call that implement the recommendation flow.
 
 ```mermaid
-flowchart TD
-	A[Guest scans QR code or opens session] --> B[Guest asks a question or makes a request]
-	B --> C{Can the AI answer using restaurant data?}
-	C -->|Yes| D[Show menu information or recommendation]
-	C -->|No| E[Explain uncertainty and notify staff]
-	D --> F{Does the guest want to order?}
-	F -->|No| B
-	F -->|Yes| G[Add items and modifiers to cart]
-	G --> H[Check availability and required choices]
-	H --> I[Show order summary and total]
-	I --> J{Guest confirms order?}
-	J -->|No| G
-	J -->|Yes| K[Submit order to staff]
-	K --> L[Staff confirms and updates order status]
-	E --> M[Staff responds to the guest]
+flowchart LR
+	classDef browser fill:#e8f1ff,stroke:#2563eb,color:#172554
+	classDef server fill:#ecfdf5,stroke:#059669,color:#064e3b
+	classDef data fill:#fff7ed,stroke:#ea580c,color:#7c2d12
+	classDef external fill:#fef2f2,stroke:#dc2626,color:#7f1d1d
+
+	subgraph Browser[Browser runtime]
+		Guest[Guest selects questionnaire answers] --> JS[frontend/static/chatbot.js]
+		HTML[GET / -> frontend/templates/chat.html] --> JS
+		CSS[frontend/static/style1.css] -.-> HTML
+		JS --> Answers[(answers object)]
+		Answers -->|POST /recommend\nJSON: user_preferences| Recommend
+		Recommend[Render recommendation\ninto chatlog] --> Guest
+	end
+
+	subgraph Flask[Flask server: backend/app.py]
+		Start[python backend/app.py] --> Load[Startup: glob + json.load]
+		Route[POST /recommend] --> Parse[request.json\nextract user_preferences]
+		Parse --> Recommend
+		Parse --> Helper[backend/utils/gemini_chat.py\nget_gemini_recommendation]
+		MenuRoute[GET /api/menu] --> MenuResponse[Return MENU_DATA as JSON]
+	end
+
+	subgraph Files[Static and data files]
+		MenuFile[frontend/static/assets/menus/menu.json] --> Load
+		Load --> MenuData[(MENU_DATA in memory)]
+		MenuData --> Helper
+		HTMLFile[frontend/templates/chat.html] --> HTML
+	end
+
+	Helper --> Prompt[Build grounded prompt\npreferences + menu database]
+	Prompt --> Gemini[Google Gemini API\nmodel: gemini-2.5-flash]
+	Gemini --> Result[response.text]
+	Result --> Route
+	Route -->|JSON: recommendation| Recommend
+	Env[.env: GEMINI_API_KEY] --> Helper
+
+	class Guest,HTML,JS,Answers,Recommend,CSS browser
+	class Start,Load,Route,Parse,Helper,MenuRoute,MenuResponse,MenuData server
+	class MenuFile,HTMLFile,Prompt data
+	class Gemini,Env,Result external
+
+	%% /api/menu is available for clients but is not called by chatbot.js in the current prototype.
 ```
 
-**In simple terms:** the guest asks, the AI answers from the approved menu, the guest reviews the cart, and staff receive the confirmed order or any request the AI cannot handle.
+**Runtime summary:** Flask renders `chat.html` and serves its static assets. On startup, `app.py` reads `menu.json` into `MENU_DATA`. After the guest completes the questionnaire, `chatbot.js` sends the answers to `/recommend`; `app.py` passes those answers and `MENU_DATA` to `gemini_chat.py`, which calls Gemini and returns the generated recommendation to the browser. The current prototype does not yet implement cart, order submission, or staff-dashboard requests.
 
 ## 2. Problem Statement
 
