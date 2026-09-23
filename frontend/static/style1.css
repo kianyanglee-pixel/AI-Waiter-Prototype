@@ -132,6 +132,24 @@ body{
 }
 
 /* ---------- Chat log ---------- */
+.avatar {
+  width: 40px;          /* Adjust size as needed */
+  height: 40px;         /* Keep it equal to width for a perfect circle */
+  border-radius: 50%;   /* Makes it a circle */
+  overflow: hidden;     /* Hides whatever spills outside the circle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;       /* Prevents it from squishing */
+  background-color: #fff; /* Fallback background color if image has transparency */
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;    /* Scales the image to fill the circle nicely without distortion */
+}
+
 .chatlog{
   flex:1;
   overflow-y:auto;
@@ -189,6 +207,7 @@ body{
 .row.bot .bubble .qsub{
   color:var(--ink-soft);
   font-size:12.5px;
+  white-space: pre-line;
 }
 
 .row.user .bubble{

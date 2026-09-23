@@ -37,6 +37,51 @@ const STEPS = [
   },
 ];
 
+// -- AI voice! --
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); // Stop any overlapping speech
+    
+    const cleanText = text.replace(/[*#_]/g, ''); // Remove markdown characters
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Try to find Malaysian English (en-MY)
+    const malaysianVoice = voices.find(voice => 
+      voice.lang.toLowerCase().includes('en-my')
+    );
+
+    if (malaysianVoice) {
+      utterance.voice = malaysianVoice;
+      utterance.lang = malaysianVoice.lang;
+      console.log("Using Malaysian English voice:", malaysianVoice.name);
+    } else {
+      // Fallback to US English (or browser default) if Malaysian voice isn't installed
+      utterance.lang = 'en-US';
+      console.log("Malaysian voice not found. Falling back to US/default voice.");
+    }
+
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+// Ensure voices are loaded properly when the browser opens
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
+// Ensure voices are loaded properly when the browser opens
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
 let stepIndex = 0;
 let answers = {};
 const chatlog = document.getElementById('chatlog');
@@ -71,13 +116,16 @@ function addBotBubble(step) {
   const row = document.createElement('div');
   row.className = 'row bot';
   row.innerHTML = `
-    <div class="avatar">南</div>
+    <div class="avatar"><img src="/static/pic/logo.jpg" alt="Old Nanyang Kopi"></div>
     <div class="bubble">
       <div class="qtitle">${step.title}</div>
       <div class="qsub">${step.sub}</div>
     </div>
   `;
   chatlog.appendChild(row);
+
+  // Speak the question out loud
+  speak(step.title);
 
   const optWrap = document.createElement('div');
   optWrap.className = 'options';
@@ -251,6 +299,9 @@ function showResults() {
     </div>
   `;
   chatlog.appendChild(row);
+
+  speak("Finding your best match. Consulting BiteMatch AI and menu database.");
+
   scrollBottom();
 
   fetch('/recommend', {
@@ -272,6 +323,8 @@ function showResults() {
       </div>
     `;
     chatlog.appendChild(botRow);
+
+    speak(data.recommendation);
 
     const restart = document.createElement('button');
     restart.className = 'restartbtn';
